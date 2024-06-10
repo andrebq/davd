@@ -1,0 +1,7 @@
+dist
+localfiles
+*.mk
+Makefile
+Dockerfile
+.gitignore
+modd.conf

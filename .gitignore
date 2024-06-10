@@ -1,0 +1,4 @@
+dist
+localfiles
+LocalEnv.mk
+*.db
