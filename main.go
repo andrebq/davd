@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -14,29 +16,11 @@ import (
 )
 
 func main() {
-	app := cli.App{
-		Name: "davd",
-		Flags: []cli.Flag{
-			&cli.StringFlag{},
-		},
-		Commands: []*cli.Command{
-			serverCmd(),
-		},
-	}
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-	if err := app.RunContext(ctx, os.Args); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func serverCmd() *cli.Command {
 	var configdb *config.DB
 
 	configDir := "."
-
-	return &cli.Command{
-		Name: "server",
+	app := cli.App{
+		Name: "davd",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "config-dir",
@@ -54,8 +38,57 @@ func serverCmd() *cli.Command {
 			}
 			return nil
 		},
+		Commands: []*cli.Command{
+			serverCmd(&configdb),
+			authCmd(&configdb),
+		},
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	if err := app.RunContext(ctx, os.Args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func authCmd(db **config.DB) *cli.Command {
+	return &cli.Command{
+		Name: "auth",
 		Subcommands: []*cli.Command{
-			serverRunCmd(&configdb),
+			authUserCmd(db),
+		},
+	}
+}
+
+func authUserCmd(db **config.DB) *cli.Command {
+	var username string
+	return &cli.Command{
+		Name: "user",
+		Subcommands: []*cli.Command{
+			{
+				Name:        "add",
+				Description: "Add a new user, password is read from stdin all leading/trailing whitespace gets removed!",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "name", Usage: "username", Required: true, Destination: &username},
+				},
+				Action: func(ctx *cli.Context) error {
+					passwd, err := io.ReadAll(os.Stdin)
+					if err != nil {
+						return err
+					}
+					passwd = bytes.TrimSpace(passwd)
+					return auth.UpsertUser(ctx.Context, *db, username, string(passwd))
+				},
+			},
+		},
+	}
+}
+
+func serverCmd(db **config.DB) *cli.Command {
+	return &cli.Command{
+		Name:  "server",
+		Flags: []cli.Flag{},
+		Subcommands: []*cli.Command{
+			serverRunCmd(db),
 		},
 	}
 }

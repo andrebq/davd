@@ -21,15 +21,11 @@ func (ErrInvalidCredentials) Error() string {
 
 func InitRoot(ctx context.Context, db *config.DB, token string) (bool, error) {
 	var root User
-	key := config.Key("users/root/profile")
+	root.Name = "root"
+	key := userProfileKey(root)
 	err := db.Get(ctx, &root, key)
 	if config.NotFound(err) {
-		root.Name = "root"
-		root.SaltedToken, err = saltPassword(token, nil)
-		if err != nil {
-			return false, err
-		}
-		err = db.Put(ctx, key, root)
+		err = putUser(ctx, db, root, token)
 		return err == nil, err
 	}
 	return false, nil

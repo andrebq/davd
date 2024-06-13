@@ -1,4 +1,5 @@
 .PHONY: build run test tidy
+.SILENT: run-add-user
 
 include Environment.mk
 
@@ -35,6 +36,13 @@ run:
 		DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
 		DAVD_DYNBIND_SCRATCH=scratch:$(localfiles)/scratch \
 		./dist/davd server run
+
+argUsername?=test
+argPassword?=test
+run-add-user:
+	echo $(argPassword) | \
+		DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
+		./dist/davd auth user add --name=$(argUsername)
 
 run-filestash-demo:
 	mkdir -p $(localfiles)/filestash

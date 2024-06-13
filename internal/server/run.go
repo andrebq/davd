@@ -55,7 +55,7 @@ func Run(ctx context.Context, db *config.DB, env Environ) error {
 		handlers[name] = webdav.Dir(fp)
 	}
 
-	mux := http.NewServeMux()
+	bindsMuxer := http.NewServeMux()
 	for k, v := range handlers {
 		urlpath := fmt.Sprintf("%v/", filepath.Join("/", "binds", k))
 		h := webdav.Handler{
@@ -71,17 +71,19 @@ func Run(ctx context.Context, db *config.DB, env Environ) error {
 				slog.Info("Request", "method", r.Method, "path", r.URL.Path)
 			},
 		}
-		mux.Handle(urlpath, &h)
+		bindsMuxer.Handle(urlpath, &h)
 	}
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	rootMux := http.NewServeMux()
+	rootMux.Handle("/binds/", Protect(db, bindsMuxer))
+	rootMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "OK")
 	})
 
 	srv := http.Server{
 		Addr:           net.JoinHostPort(cfg.Address, strconv.FormatUint(uint64(cfg.Port), 10)),
 		MaxHeaderBytes: 1000,
-		Handler:        mux,
+		Handler:        rootMux,
 		BaseContext:    func(l net.Listener) context.Context { return ctx },
 	}
 
