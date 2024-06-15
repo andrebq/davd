@@ -61,6 +61,8 @@ func authCmd(db **config.DB) *cli.Command {
 
 func authUserCmd(db **config.DB) *cli.Command {
 	var username string
+	var permissions cli.StringSlice
+	var canWrite bool
 	return &cli.Command{
 		Name: "user",
 		Subcommands: []*cli.Command{
@@ -77,6 +79,21 @@ func authUserCmd(db **config.DB) *cli.Command {
 					}
 					passwd = bytes.TrimSpace(passwd)
 					return auth.UpsertUser(ctx.Context, *db, username, string(passwd))
+				},
+			},
+			{
+				Name:        "update-permission",
+				Description: "Update the given profile with a new set of permissions",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "name", Usage: "username", Required: true, Destination: &username},
+					&cli.StringSliceFlag{Name: "permission", Aliases: []string{"p"}, Usage: "Path which the user can read/write", Destination: &permissions},
+					&cli.BoolFlag{Name: "can-write", Aliases: []string{"w"}, Usage: "Indicates if the user can write (applies to previous paths as well)", Destination: &canWrite},
+				},
+				Action: func(ctx *cli.Context) error {
+					return auth.UpdatePermissions(ctx.Context, *db, username, auth.Permissions{
+						Allowed:  permissions.Value(),
+						CanWrite: canWrite,
+					})
 				},
 			},
 		},

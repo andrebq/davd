@@ -10,6 +10,8 @@ type (
 	User struct {
 		Name        string `msgpack:"name"`
 		SaltedToken []byte `msgpack:"salted_token"`
+
+		Permissions *Permissions `msgpack:"permissions"`
 	}
 
 	ErrInvalidCredentials struct{}
