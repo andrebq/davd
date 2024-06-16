@@ -3,18 +3,25 @@
 
 include Environment.mk
 
+IMAGE_REPO?=andrebq/davd
+imageLabel?=latest
+IMAGE_FULL_NAME?=$(IMAGE_REPO):$(imageLabel)
+
 build: test
 	mkdir -p dist
 	go build -o dist/davd .
 
 docker-build:
-	docker buildx build --platform linux/amd64,linux/arm64 -t andrebq/davd:latest .
+	docker buildx build --platform linux/amd64,linux/arm64 -t $(IMAGE_FULL_NAME) .
 
 docker-push: docker-build
-	docker push andrebq/davd:latest
+	docker push $(IMAGE_FULL_NAME)
 
 docker-quick-build:
-	docker buildx build --platform linux/arm64 -t andrebq/davd:latest .
+	docker buildx build --platform linux/arm64 -t $(IMAGE_FULL_NAME) .
+
+docker-daily-push:
+	$(MAKE) docker-push imageLabel=$(shell date '+%Y-%m-%d')
 
 test: tidy
 	true
@@ -39,10 +46,23 @@ run:
 
 argUsername?=test
 argPassword?=test
+argCanWrite?=-w
+argPermission?=/binds/
 run-add-user:
 	echo $(argPassword) | \
 		DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
 		./dist/davd auth user add --name=$(argUsername)
+
+run-add-permission:
+	DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
+		./dist/davd auth user update-permission --name=$(argUsername) -p $(argPermission) $(argCanWrite)
+
+run-add-scratch-user:
+	echo scratch | \
+		DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
+		./dist/davd auth user add --name=scratch
+	DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
+		./dist/davd auth user update-permission --name=scratch -p /binds/scratch
 
 run-filestash-demo:
 	mkdir -p $(localfiles)/filestash

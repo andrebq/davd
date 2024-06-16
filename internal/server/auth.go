@@ -50,7 +50,7 @@ func authorize(w http.ResponseWriter, r *http.Request, next http.Handler) {
 func hasPermissions(perm auth.Permissions, url *url.URL, method string) bool {
 	canAccess := false
 	for _, v := range perm.Allowed {
-		if strings.HasSuffix(v, "/") {
+		if !strings.HasSuffix(v, "/") {
 			v = fmt.Sprintf("%v/", v)
 		}
 		if strings.HasPrefix(url.Path, v) {

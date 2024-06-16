@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -34,22 +35,13 @@ func Run(ctx context.Context, db *config.DB, env Environ) error {
 	if err != nil {
 		return err
 	}
-	dir := webdav.Dir(abs)
-
-	scratch, err := os.MkdirTemp("", "davd-scratch")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(scratch)
-
-	handlers := map[string]webdav.FileSystem{
-		"default": dir,
-	}
+	handlers := map[string]webdav.FileSystem{}
 
 	bindings, err := UpdateDynamicBinds(ctx, db, env.Entries, env.Expand)
 	if err != nil {
 		return err
 	}
+	bindings.Entries["default"] = abs
 
 	for name, fp := range bindings.Entries {
 		handlers[name] = webdav.Dir(fp)
@@ -57,7 +49,7 @@ func Run(ctx context.Context, db *config.DB, env Environ) error {
 
 	bindsMuxer := http.NewServeMux()
 	for k, v := range handlers {
-		urlpath := fmt.Sprintf("%v/", filepath.Join("/", "binds", k))
+		urlpath := fmt.Sprintf("%v/", path.Join("/", "binds", k))
 		h := webdav.Handler{
 			Prefix:     urlpath,
 			FileSystem: v,
@@ -74,8 +66,15 @@ func Run(ctx context.Context, db *config.DB, env Environ) error {
 		bindsMuxer.Handle(urlpath, &h)
 	}
 
+	browserMuxer := http.NewServeMux()
+	for name, localPath := range bindings.Entries {
+		prefix := fmt.Sprintf("%v/", filepath.Join("/", "binds", name))
+		browserMuxer.Handle(prefix, http.StripPrefix(prefix, http.FileServerFS(os.DirFS(localPath))))
+	}
+
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/binds/", Protect(db, bindsMuxer))
+	rootMux.Handle("/browser/", http.StripPrefix("/browser", Protect(db, browserMuxer)))
 	rootMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "OK")
 	})

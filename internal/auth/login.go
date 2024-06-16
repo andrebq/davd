@@ -121,6 +121,9 @@ func CheckCredential(ctx context.Context, db *config.DB, user string, plainTextP
 	if subtle.ConstantTimeCompare(salted, profile.SaltedToken) != 1 {
 		return nil, ErrInvalidCredentials{}
 	}
+	if profile.Permissions == nil {
+		return &Permissions{}, nil
+	}
 	return profile.Permissions, nil
 }
 
