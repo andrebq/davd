@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"log"
 	"log/slog"
@@ -94,6 +95,20 @@ func authUserCmd(db **config.DB) *cli.Command {
 						Allowed:  permissions.Value(),
 						CanWrite: canWrite,
 					})
+				},
+			},
+			{
+				Name:        "list-permissions",
+				Description: "Return the list of paths that a given user can acces",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "name", Usage: "username", Required: true, Destination: &username},
+				},
+				Action: func(ctx *cli.Context) error {
+					permissions, err := auth.ListPermissions(ctx.Context, *db, username)
+					if err != nil {
+						return err
+					}
+					return json.NewEncoder(ctx.App.Writer).Encode(permissions)
 				},
 			},
 		},

@@ -99,6 +99,19 @@ func UpdatePermissions(ctx context.Context, db *config.DB, user string, permissi
 	return db.Put(ctx, key, profile)
 }
 
+func ListPermissions(ctx context.Context, db *config.DB, user string) (*Permissions, error) {
+	key := userProfileKey(User{Name: user})
+	var profile User
+	err := db.Get(ctx, &profile, key)
+	if err != nil {
+		if config.NotFound(err) {
+			return nil, ErrNotFound{Username: user}
+		}
+		return nil, err
+	}
+	return profile.Permissions, nil
+}
+
 func CheckCredential(ctx context.Context, db *config.DB, user string, plainTextPwd string) (*Permissions, error) {
 	key := userProfileKey(User{Name: user})
 	var profile User

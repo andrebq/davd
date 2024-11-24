@@ -15,7 +15,15 @@ type (
 	}
 
 	ErrInvalidCredentials struct{}
+
+	ErrNotFound struct {
+		Username string
+	}
 )
+
+func (ErrNotFound) Error() string {
+	return "auth: user not found"
+}
 
 func (ErrInvalidCredentials) Error() string {
 	return "auth: invalid credentials"
