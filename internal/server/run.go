@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/andrebq/davd/internal/config"
+	"github.com/andrebq/davd/internal/drive"
 
 	"golang.org/x/net/webdav"
 )
@@ -68,13 +69,19 @@ func Run(ctx context.Context, db *config.DB, env Environ) error {
 
 	browserMuxer := http.NewServeMux()
 	for name, localPath := range bindings.Entries {
-		prefix := fmt.Sprintf("%v/", filepath.Join("/", "binds", name))
+		prefix := fmt.Sprintf("%v/", path.Join("/", "binds", name))
 		browserMuxer.Handle(prefix, http.StripPrefix(prefix, http.FileServerFS(os.DirFS(localPath))))
+	}
+
+	driveMuxer, err := drive.NewHandler(drive.Bindings(bindings.Entries))
+	if err != nil {
+		return fmt.Errorf("unable to create drive handler: %w", err)
 	}
 
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/binds/", Protect(db, bindsMuxer))
 	rootMux.Handle("/browser/", http.StripPrefix("/browser", Protect(db, browserMuxer)))
+	rootMux.Handle("/drive/", http.StripPrefix("/drive", Protect(db, driveMuxer)))
 	rootMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "OK")
 	})

@@ -30,7 +30,7 @@ tidy:
 	go fmt ./...
 	go mod tidy
 
-run:
+run: build
 	mkdir -p $(localfiles)
 	mkdir -p $(localfiles)/scratch
 	mkdir -p $(argRootDir)
@@ -38,10 +38,12 @@ run:
 
 	DAVD_ADDR=127.0.0.1 \
 		DAVD_PORT=8080 \
+		DAVD_DEBUG=1 \
 		DAVD_ROOT_DIR=$(argRootDir) \
 		DAVD_ADMIN_TOKEN=$(DAVD_ADMIN_TOKEN) \
 		DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
 		DAVD_DYNBIND_SCRATCH=scratch:$(localfiles)/scratch \
+		DAVD_DYNBIND_PWD=pwd:$(PWD) \
 		./dist/davd server run
 
 argUsername?=test
@@ -63,6 +65,15 @@ run-add-scratch-user:
 		./dist/davd auth user add --name=scratch
 	DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
 		./dist/davd auth user update-permission --name=scratch -p /binds/scratch
+
+run-add-pwd-user:
+	echo $(argPassword) | \
+		DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
+		./dist/davd auth user add --name=pwd
+	DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
+		./dist/davd auth user update-permission --name=pwd -p /pwd/ $(argCanWrite)
+	DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
+		./dist/davd auth user update-permission --name=pwd -p /pwd/ $(argCanWrite)
 
 run-filestash-demo:
 	mkdir -p $(localfiles)/filestash

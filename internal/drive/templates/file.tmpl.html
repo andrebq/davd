@@ -1,0 +1,13 @@
+{{ define "page/file" }}
+<!DOCTYPE html>
+<html lang="en">
+    {{ template "fragments/simple_header" (printf "Info about - %q" .Name ) }}
+    <body>
+        <h1>File: {{ .Name }}</h1>
+        <dl>
+            <dt>Size:</dt><dd>{{ .Size }} bytes</dd>
+            <dt>Last Modified:</dt><dd>{{ .ModTime }}<em> - ({{ time_ago .ModTime }})</em></dd>
+        </dl>
+    </body>
+</html>
+{{ end }}

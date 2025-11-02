@@ -18,6 +18,7 @@ import (
 
 func main() {
 	var configdb *config.DB
+	var enableDebug bool = false
 
 	configDir := "."
 	app := cli.App{
@@ -30,8 +31,23 @@ func main() {
 				Destination: &configDir,
 				Value:       configDir,
 			},
+			&cli.BoolFlag{
+				Name:        "debug",
+				Usage:       "Enable debug logging",
+				EnvVars:     []string{"DAVD_DEBUG"},
+				Destination: &enableDebug,
+				Value:       enableDebug,
+				Hidden:      false,
+			},
 		},
 		Before: func(ctx *cli.Context) error {
+			ll := slog.LevelInfo
+			if enableDebug {
+				ll = slog.LevelDebug
+			}
+			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+				Level: ll,
+			})))
 			var err error
 			configdb, err = config.Open(ctx.Context, configDir)
 			if err != nil {
