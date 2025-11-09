@@ -1,0 +1,47 @@
+{{ define "fragment/createDir" }}
+		<form id="createDirForm" class="pure-form pure-form-stacked" style="margin-bottom:1em;">
+			<fieldset>
+				<legend>Create new directory</legend>
+				<input id="newDirInput" type="text" name="newdir" placeholder="Directory name" required />
+				<button id="createDirBtn" type="submit" class="pure-button pure-button-primary">Create Directory</button>
+			</fieldset>
+		</form>
+		<div id="createDirResult" style="margin-bottom:1em;"></div>
+		<script>
+		const createDirForm = document.getElementById('createDirForm');
+		const newDirInput = document.getElementById('newDirInput');
+		const createDirResult = document.getElementById('createDirResult');
+		const createDirBtn = document.getElementById('createDirBtn');
+
+		createDirForm.addEventListener('submit', async function(e) {
+			e.preventDefault();
+			const dirName = newDirInput.value.trim();
+			if (!dirName) return;
+
+			createDirBtn.disabled = true;
+			createDirResult.textContent = 'Creating directory...';
+
+			try {
+				const formData = new FormData();
+				formData.append('newdir', dirName);
+				const response = await fetch(window.location.pathname, {
+					method: 'POST',
+					body: formData
+				});
+				if (response.ok) {
+					createDirResult.textContent = 'Directory created!';
+					newDirInput.value = '';
+					// Optionally reload to show new dir
+					setTimeout(() => window.location.reload(), 700);
+				} else {
+					const text = await response.text();
+					createDirResult.textContent = 'Error: ' + text;
+				}
+			} catch (err) {
+				createDirResult.textContent = 'Error: ' + err;
+			} finally {
+				createDirBtn.disabled = false;
+			}
+		});
+		</script>
+{{ end }}

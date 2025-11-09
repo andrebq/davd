@@ -8,7 +8,7 @@ import (
 )
 
 //go:embed templates/*.html
-var assets embed.FS
+var templateAssets embed.FS
 
 var (
 	templates = template.Must(loadTemplates())
@@ -27,7 +27,7 @@ func loadTemplates() (*template.Template, error) {
 			}
 		},
 	}
-	return template.New("root").Funcs(funcs).ParseFS(assets, "templates/*.html")
+	return template.New("root").Funcs(funcs).ParseFS(templateAssets, "templates/*.html")
 }
 
 func humanizeTimeAgo(d time.Duration) string {

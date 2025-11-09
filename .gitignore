@@ -2,3 +2,4 @@ dist
 localfiles
 LocalEnv.mk
 *.db
+.vscode

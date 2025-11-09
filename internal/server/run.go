@@ -82,6 +82,7 @@ func Run(ctx context.Context, db *config.DB, env Environ) error {
 	rootMux.Handle("/binds/", Protect(db, bindsMuxer))
 	rootMux.Handle("/browser/", http.StripPrefix("/browser", Protect(db, browserMuxer)))
 	rootMux.Handle("/drive/", http.StripPrefix("/drive", Protect(db, driveMuxer)))
+	rootMux.Handle("/assets/drive/", http.StripPrefix("/assets/drive/", drive.AssetsHandler()))
 	rootMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "OK")
 	})

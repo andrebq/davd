@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"embed"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -28,18 +29,30 @@ type (
 	}
 )
 
+//go:embed assets/js/*
+var assetsStatic embed.FS
+
+func AssetsHandler() http.Handler {
+	sub, err := fs.Sub(assetsStatic, "assets")
+	if err != nil {
+		panic(err)
+	}
+	return http.FileServer(http.FS(sub))
+}
+
 func NewHandler(bindings Bindings) (http.Handler, error) {
 	muxer := http.NewServeMux()
 	h := handler{
 		muxer:    muxer,
 		bindings: bindings,
 	}
-	for bind := range bindings {
+	for bind, localPath := range bindings {
 		fn, err := h.serveBind(bind)
 		if err != nil {
 			return nil, fmt.Errorf("unable to setup handler for bind %v (%v): %w", bind, bindings[bind], err)
 		}
-		muxer.HandleFunc(fmt.Sprintf("/%v/", bind), fn)
+		muxer.Handle(fmt.Sprintf("POST /%v/", bind), http.StripPrefix(fmt.Sprintf("/%v", bind), h.handlePost(bind, localPath)))
+		muxer.HandleFunc(fmt.Sprintf("GET /%v/", bind), fn)
 	}
 
 	return muxer, nil
