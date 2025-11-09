@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/andrebq/davd/internal/auth"
 	"github.com/andrebq/davd/internal/config"
 )
 
@@ -20,25 +19,21 @@ func Protect(db *config.DB, next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		permissions, err := auth.CheckCredential(r.Context(), db, user, pwd)
-		if auth.IsInvalidCredential(err) {
-			slog.Warn("Invalid access attempt", "user", user)
+		_, userdata, err := db.PasswordLogin(user, pwd)
+		if err != nil {
+			slog.Error("Error while checking user authentication", "err", err)
 			w.Header().Add("WWW-Authenticate", "Basic realm=\"DAVD Server\"")
 			w.WriteHeader(http.StatusUnauthorized)
 			return
-		} else if err != nil {
-			slog.Error("Error while checking user authentication", "err", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
 		}
-		r = r.WithContext(auth.WithPermissions(r.Context(), *permissions))
+		r = r.WithContext(config.WithUser(r.Context(), userdata))
 		authorize(w, r, next)
 	})
 }
 
 func authorize(w http.ResponseWriter, r *http.Request, next http.Handler) {
-	perm := auth.GetPermissions(r.Context())
-	if !hasPermissions(perm, r.URL, r.Method) {
+	user := config.UserFromContext(r.Context())
+	if !hasPermissions(user.Permissions, r.URL, r.Method) {
 		slog.Error("User attempted to access a resources but lacks permission", "url", r.URL, "method", r.Method)
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -47,25 +42,28 @@ func authorize(w http.ResponseWriter, r *http.Request, next http.Handler) {
 	next.ServeHTTP(w, r)
 }
 
-func hasPermissions(perm auth.Permissions, url *url.URL, method string) bool {
-	canAccess := false
-	for _, v := range perm.Allowed {
-		if !strings.HasSuffix(v, "/") {
-			v = fmt.Sprintf("%v/", v)
+func hasPermissions(perm []config.Permission, url *url.URL, method string) bool {
+	var assigned config.Permission
+	for _, v := range perm {
+		prefix := v.Prefix
+		if !strings.HasSuffix(prefix, "/") {
+			prefix = fmt.Sprintf("%v/", v)
 		}
-		if strings.HasPrefix(url.Path, v) {
-			canAccess = true
+		println("checking", url.Path, "against", prefix)
+		if strings.HasPrefix(url.Path, prefix) && (v.Writer || v.Reader || v.Execute) {
+			assigned = v
 			break
 		}
 	}
-	if !canAccess {
+	if assigned.Prefix == "" {
 		return false
 	}
 
 	switch method {
 	case "GET", "PROPFIND":
 		// writers can also read data, therefore we dont need to check if CanWrite is true
-		return true
+		return assigned.Reader
+
 	}
-	return perm.CanWrite
+	return assigned.Writer
 }

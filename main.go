@@ -7,19 +7,20 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 
-	"github.com/andrebq/davd/internal/auth"
 	"github.com/andrebq/davd/internal/config"
 	"github.com/andrebq/davd/internal/server"
 	"github.com/urfave/cli/v2"
 )
 
 func main() {
-	var configdb *config.DB
 	var enableDebug bool = false
 
+	var configdb *config.DB
 	configDir := "."
 	app := cli.App{
 		Name: "davd",
@@ -49,7 +50,7 @@ func main() {
 				Level: ll,
 			})))
 			var err error
-			configdb, err = config.Open(ctx.Context, configDir)
+			configdb, err = config.Open(ctx.Context, configDir, os.Getenv)
 			if err != nil {
 				return err
 			}
@@ -95,7 +96,7 @@ func authUserCmd(db **config.DB) *cli.Command {
 						return err
 					}
 					passwd = bytes.TrimSpace(passwd)
-					return auth.UpsertUser(ctx.Context, *db, username, string(passwd))
+					return (*db).UpsertUser(username, string(passwd))
 				},
 			},
 			{
@@ -103,14 +104,20 @@ func authUserCmd(db **config.DB) *cli.Command {
 				Description: "Update the given profile with a new set of permissions",
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "name", Usage: "username", Required: true, Destination: &username},
-					&cli.StringSliceFlag{Name: "permission", Aliases: []string{"p"}, Usage: "Path which the user can read/write", Destination: &permissions},
+					&cli.StringSliceFlag{Name: "prefix", Aliases: []string{"p"}, Usage: "One or more prefixes that the user can access", Destination: &permissions},
 					&cli.BoolFlag{Name: "can-write", Aliases: []string{"w"}, Usage: "Indicates if the user can write (applies to previous paths as well)", Destination: &canWrite},
 				},
 				Action: func(ctx *cli.Context) error {
-					return auth.UpdatePermissions(ctx.Context, *db, username, auth.Permissions{
-						Allowed:  permissions.Value(),
-						CanWrite: canWrite,
-					})
+					var perms []config.Permission
+					for _, p := range permissions.Value() {
+						perms = append(perms, config.Permission{
+							Prefix:  p,
+							Reader:  true,
+							Writer:  canWrite,
+							Execute: false,
+						})
+					}
+					return (*db).UpdatePermissions(username, perms)
 				},
 			},
 			{
@@ -120,11 +127,11 @@ func authUserCmd(db **config.DB) *cli.Command {
 					&cli.StringFlag{Name: "name", Usage: "username", Required: true, Destination: &username},
 				},
 				Action: func(ctx *cli.Context) error {
-					permissions, err := auth.ListPermissions(ctx.Context, *db, username)
+					user, err := (*db).FindUser(username)
 					if err != nil {
 						return err
 					}
-					return json.NewEncoder(ctx.App.Writer).Encode(permissions)
+					return json.NewEncoder(ctx.App.Writer).Encode(user.Permissions)
 				},
 			},
 		},
@@ -146,6 +153,7 @@ func serverRunCmd(db **config.DB) *cli.Command {
 	var port uint
 	var rootDir string
 	var adminToken string
+	var hostAndPort string
 	return &cli.Command{
 		Name:  "run",
 		Usage: "Run the HTTP server",
@@ -183,21 +191,21 @@ func serverRunCmd(db **config.DB) *cli.Command {
 				Destination: &adminToken,
 			},
 		},
+		Before: func(ctx *cli.Context) error {
+			hostAndPort = net.JoinHostPort(addr, strconv.FormatUint(uint64(port), 10))
+			return nil
+		},
 		Action: func(ctx *cli.Context) error {
-			created, initRootErr := auth.InitRoot(ctx.Context, *db, adminToken)
-			if initRootErr != nil {
-				return initRootErr
+			created, err := (*db).InitialSetup()
+			if err != nil {
+				return err
 			}
 			if created {
 				slog.Info("Root user created!")
 			} else {
 				slog.Info("Root user already present, DAVD_ADMIN_TOKEN was ignored")
 			}
-			err := server.UpdateBaseConfig(ctx.Context, *db, addr, port, rootDir)
-			if err != nil {
-				return err
-			}
-			return server.Run(ctx.Context, *db, server.Environ{
+			return server.Run(ctx.Context, *db, hostAndPort, server.Environ{
 				Entries: os.Environ,
 				Expand:  os.ExpandEnv,
 			})

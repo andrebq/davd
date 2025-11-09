@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/andrebq/davd/internal/config"
@@ -27,23 +25,13 @@ type (
 	}
 )
 
-func Run(ctx context.Context, db *config.DB, env Environ) error {
-	cfg, err := LoadConfig(ctx, db)
-	if err != nil {
-		return err
-	}
-	abs, err := filepath.Abs(cfg.RootDir)
-	if err != nil {
-		return err
-	}
+func Run(ctx context.Context, db *config.DB, hostAndPort string, env Environ) error {
 	handlers := map[string]webdav.FileSystem{}
 
-	bindings, err := UpdateDynamicBinds(ctx, db, env.Entries, env.Expand)
+	bindings, err := UpdateDynamicBinds(ctx, env.Entries, env.Expand)
 	if err != nil {
 		return err
 	}
-	bindings.Entries["default"] = abs
-
 	for name, fp := range bindings.Entries {
 		handlers[name] = webdav.Dir(fp)
 	}
@@ -88,7 +76,7 @@ func Run(ctx context.Context, db *config.DB, env Environ) error {
 	})
 
 	srv := http.Server{
-		Addr:           net.JoinHostPort(cfg.Address, strconv.FormatUint(uint64(cfg.Port), 10)),
+		Addr:           hostAndPort,
 		MaxHeaderBytes: 1000,
 		Handler:        rootMux,
 		BaseContext:    func(l net.Listener) context.Context { return ctx },

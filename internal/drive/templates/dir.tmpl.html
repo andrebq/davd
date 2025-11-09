@@ -1,18 +1,18 @@
 {{ define "page/directory" }}
 <!DOCTYPE html>
 <html lang="en">
-    {{ template "fragments/simple_header" (printf "Content of - %q" .Basename) }}
-    <body>
-        <h1>Content of - {{.Basename }}</h1>
-        {{ template "fragment/createDir" }}
-        {{ template "fragment/upload" }}
+	{{ template "fragments/simple_header" (printf "Content of - %q" .Basename) }}
+	<body>
+		<h1>Content of - {{.Basename }}</h1>
+		{{ template "fragment/createDir" }}
+		{{ template "fragment/upload" }}
 
-        {{ range .Dirs }}
-        <div class="dir"><a href="./{{ . }}/">{{ . }}/</a></div>
-        {{ end }}
-        {{ range .Files }}
-        <div class="file"><a href="./{{ . }}">{{ . }}</a></div>
-        {{ end }}
-    </body>
+		{{ range .Dirs }}
+		<div class="dir"><a href="./{{ . }}/">{{ . }}/</a></div>
+		{{ end }}
+		{{ range .Files }}
+		<div class="file"><a href="./{{ . }}">{{ . }}</a></div>
+		{{ end }}
+	</body>
 </html>
 {{ end }}

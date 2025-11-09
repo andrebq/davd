@@ -5,12 +5,6 @@ import (
 	"log/slog"
 	"regexp"
 	"sort"
-
-	"github.com/andrebq/davd/internal/config"
-)
-
-var (
-	dynamicBindingsKey = configPrefix.Sub("binds", "dynamic")
 )
 
 type (
@@ -19,11 +13,7 @@ type (
 	}
 )
 
-func UpdateDynamicBinds(ctx context.Context, db *config.DB, environ func() []string, expandEnv func(string) string) (*DynamicBindings, error) {
-	_, err := db.DelPrefix(ctx, dynamicBindingsKey)
-	if err != nil {
-		return nil, err
-	}
+func UpdateDynamicBinds(ctx context.Context, environ func() []string, expandEnv func(string) string) (*DynamicBindings, error) {
 	vars := environ()
 	sort.Strings(vars)
 
@@ -44,10 +34,6 @@ func UpdateDynamicBinds(ctx context.Context, db *config.DB, environ func() []str
 				dynbind.Entries[nameAndPath[0][1]] = nameAndPath[0][2]
 			}
 		}
-	}
-	err = db.Put(ctx, dynamicBindingsKey, dynbind)
-	if err != nil {
-		return nil, err
 	}
 	return &dynbind, nil
 }
