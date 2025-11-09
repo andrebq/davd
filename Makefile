@@ -12,10 +12,10 @@ build: test
 	go build -o dist/davd .
 
 docker-build:
-	docker buildx build --platform linux/amd64,linux/arm64 -t $(IMAGE_FULL_NAME) .
+	docker buildx build $(dockerPushFlag) --platform linux/amd64,linux/arm64 -t $(IMAGE_FULL_NAME) .
 
 docker-push: docker-build
-	docker push $(IMAGE_FULL_NAME)
+	$(MAKE) docker-build dockerPushFlag=--push imageLabel=$(imageLabel)
 
 docker-quick-build:
 	docker buildx build --platform linux/arm64 -t $(IMAGE_FULL_NAME) .
