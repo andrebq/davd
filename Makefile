@@ -86,3 +86,8 @@ run-add-pwd-user:
 run-filestash-demo:
 	mkdir -p $(localfiles)/filestash
 	$(docker) run --rm -ti -v $(localfiles)/filestash:/app/data/state/ -p 8334:8334 machines/filestash
+
+### Assets below this line ###
+fetch-pure-css:
+	mkdir -p internal/drive/assets/css
+	curl -L https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/base-min.css -o internal/drive/assets/css/pure-min.css

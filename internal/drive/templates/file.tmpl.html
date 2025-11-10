@@ -8,6 +8,12 @@
 			<dt>Size:</dt><dd>{{ .Size }} bytes</dd>
 			<dt>Last Modified:</dt><dd>{{ .ModTime }}<em> - ({{ time_ago .ModTime }})</em></dd>
 		</dl>
+		<section class="tileset">
+			<a class="tile" href="./{{ .Name }}?download=true">
+				<i class="icon ic-download"></i>
+				<span>Download File</span>
+			</a>
+		</section>
 	</body>
 </html>
 {{ end }}

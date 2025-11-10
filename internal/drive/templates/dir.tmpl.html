@@ -7,12 +7,20 @@
 		{{ template "fragment/createDir" }}
 		{{ template "fragment/upload" }}
 
-		{{ range .Dirs }}
-		<div class="dir"><a href="./{{ . }}/">{{ . }}/</a></div>
-		{{ end }}
-		{{ range .Files }}
-		<div class="file"><a href="./{{ . }}">{{ . }}</a></div>
-		{{ end }}
+		<section class="tileset">
+			{{ range .Dirs }}
+			<a class="dir tile" title="{{ . }}" href="./{{.}}/">
+				<i class="icon ic-folder"></i>
+				<span class="label">{{ . }}/</span>
+			</a>
+			{{ end }}
+			{{ range .Files }}
+			<a href="./{{ . }}" class="file tile" title="{{ . }}">
+				<i class="icon ic-file"></i>
+				<span class="label">{{ . }}</span>
+			</a>
+			{{ end }}
+		</section>
 	</body>
 </html>
 {{ end }}
