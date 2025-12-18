@@ -49,7 +49,6 @@ func hasPermissions(perm []config.Permission, url *url.URL, method string) bool 
 		if !strings.HasSuffix(prefix, "/") {
 			prefix = fmt.Sprintf("%v/", v)
 		}
-		println("checking", url.Path, "against", prefix)
 		if strings.HasPrefix(url.Path, prefix) && (v.Writer || v.Reader || v.Execute) {
 			assigned = v
 			break

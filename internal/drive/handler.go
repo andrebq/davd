@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 type (
@@ -136,20 +135,7 @@ func (h *handler) renderDir(stat os.FileInfo, localAbs string, w http.ResponseWr
 
 func (h *handler) renderFile(stat os.FileInfo, localAbs string, w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("download") == "true" {
-		var mtime time.Time
-		st, err := os.Lstat(localAbs)
-		if err == nil {
-			mtime = st.ModTime()
-		}
-		fd, err := os.Open(localAbs)
-		if err != nil {
-			slog.Error("Failed to open file for download", "localAbs", localAbs, "error", err)
-			http.Error(w, "Failed to open file for download", http.StatusInternalServerError)
-			return
-		}
-		defer fd.Close()
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(localAbs)))
-		http.ServeContent(w, r, filepath.Base(localAbs), mtime, fd)
+		h.downloadFile(stat, localAbs, w, r)
 		return
 	}
 	var err error
@@ -167,4 +153,17 @@ func (h *handler) renderFile(stat os.FileInfo, localAbs string, w http.ResponseW
 		slog.Error("Failed to write response", "localAbs", localAbs, "error", err)
 		return
 	}
+}
+
+func (h *handler) downloadFile(stat os.FileInfo, localAbs string, w http.ResponseWriter, r *http.Request) {
+	mtime := stat.ModTime()
+	fd, err := os.Open(localAbs)
+	if err != nil {
+		slog.Error("Failed to open file for download", "localAbs", localAbs, "error", err)
+		http.Error(w, "Failed to open file for download", http.StatusInternalServerError)
+		return
+	}
+	defer fd.Close()
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(localAbs)))
+	http.ServeContent(w, r, filepath.Base(localAbs), mtime, fd)
 }
