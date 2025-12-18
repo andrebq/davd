@@ -1,0 +1,27 @@
+{{ define "fragment/renameDir" }}
+<form
+    id="renameDirForm"
+    class="pure-form pure-form-stacked"
+    style="margin-bottom: 1em"
+    method="POST"
+    action="."
+>
+    <fieldset>
+        <legend>Rename directory</legend>
+        <input
+            id="newName"
+            type="text"
+            name="newName"
+            placeholder="Rename to"
+            required
+        />
+        <button
+            id="renameDirBtn"
+            type="submit"
+            class="pure-button pure-button-primary"
+        >
+            Rename Directory
+        </button>
+    </fieldset>
+</form>
+{{ end }}

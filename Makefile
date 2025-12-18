@@ -43,6 +43,7 @@ run: build
 		DAVD_ADMIN_TOKEN=$(DAVD_ADMIN_TOKEN) \
 		DAVD_SERVER_CONFIG_DIR=$(DAVD_SERVER_CONFIG_DIR) \
 		DAVD_DYNBIND_SCRATCH=scratch:$(localfiles)/scratch \
+		DAVD_DYNBIND_HOME=home:$(localfiles)/root-dir/home \
 		DAVD_DYNBIND_PWD=pwd:$(PWD) \
 		DAVD_SEED_KEY=$(DAVD_SEED_KEY) \
 		./dist/davd server run

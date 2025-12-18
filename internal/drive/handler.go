@@ -52,6 +52,7 @@ func NewHandler(bindings Bindings) (http.Handler, error) {
 			return nil, fmt.Errorf("unable to setup handler for bind %v (%v): %w", bind, bindings[bind], err)
 		}
 		muxer.Handle(fmt.Sprintf("POST /%v/", bind), http.StripPrefix(fmt.Sprintf("/%v", bind), h.handlePost(bind, localPath)))
+		muxer.Handle(fmt.Sprintf("PUT /%v/", bind), http.StripPrefix(fmt.Sprintf("/%v", bind), h.handlePut(bind, localPath)))
 		muxer.HandleFunc(fmt.Sprintf("GET /%v/", bind), fn)
 	}
 
@@ -83,6 +84,11 @@ func (h *handler) handleFileRequest(bindPrefix string, localPath string, w http.
 		return
 	}
 	if stat.IsDir() {
+		// check if the url path ends with a slash, if not, force a redirect
+		if !strings.HasSuffix(r.URL.Path, "/") {
+			http.Redirect(w, r, fmt.Sprintf("/drive/%v/", r.URL.Path), http.StatusSeeOther)
+			return
+		}
 		h.renderDir(stat, localAbs, w, r)
 		return
 	}

@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -8,6 +9,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/andrebq/davd/internal/config"
 )
 
 func (h *handler) handlePost(bind, localPath string) http.HandlerFunc {
@@ -16,7 +19,7 @@ func (h *handler) handlePost(bind, localPath string) http.HandlerFunc {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		err := r.ParseMultipartForm(100_000_000)
+		err := r.ParseForm()
 		if err != nil {
 			http.Error(w, "Failed to parse multipart form: "+err.Error(), http.StatusBadRequest)
 			return
@@ -24,6 +27,27 @@ func (h *handler) handlePost(bind, localPath string) http.HandlerFunc {
 
 		if newDir := r.FormValue("newdir"); newDir != "" {
 			createNewDir(filepath.Join(localPath), path.Clean(r.URL.Path), newDir, w)
+			return
+		}
+
+		if renameDir := r.FormValue("newName"); renameDir != "" {
+			renameDirectory(r.Context(), filepath.Join(localPath), bind, path.Clean(r.URL.Path), renameDir, r, w)
+			return
+		}
+
+		http.Error(w, "invalid request", http.StatusBadRequest)
+	}
+}
+
+func (h *handler) handlePut(bind, localPath string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		err := r.ParseMultipartForm(100_000_000)
+		if err != nil {
+			http.Error(w, "Failed to parse multipart form: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -76,6 +100,22 @@ func (h *handler) handlePost(bind, localPath string) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusCreated)
 	}
+}
+
+func renameDirectory(ctx context.Context, baseFilePath, bind, urlPath, newName string, req *http.Request, w http.ResponseWriter) {
+	oldFile := filepath.Join(baseFilePath, path.Clean(urlPath))
+	newBaseName := path.Base(path.Clean(newName))
+	newFullName := filepath.Join(filepath.Dir(oldFile), newBaseName)
+	slog.Warn("Rename directory/file", "from", oldFile, "to", newFullName, "user", config.UserFromContext(ctx).Name)
+	err := os.Rename(oldFile, newFullName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to rename directory: %v", err), http.StatusInternalServerError)
+		return
+	}
+	// redirect to the new path
+	redirpath := path.Join("/drive", bind, urlPath, "../", newBaseName)
+	println("redirect to", redirpath)
+	http.Redirect(w, req, redirpath, http.StatusSeeOther)
 }
 
 func createNewDir(baseFilePath, urlPath, newDir string, w http.ResponseWriter) {

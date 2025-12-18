@@ -1,81 +1,107 @@
 {{ define "fragment/upload" }}
-		<form id="uploadForm" class="pure-form pure-form-stacked" style="margin-bottom:1em;">
-			<fieldset>
-				<legend>Upload new file</legend>
-				<input id="fileInput" name="file" type="file" required />
-				<button id="uploadBtn" type="submit" class="pure-button pure-button-primary">Upload</button>
-			</fieldset>
-		</form>
-		<div id="progressContainer" style="display:none; margin-bottom:1em;">
-			<progress id="uploadProgress" value="0" max="100" style="width:100%;"></progress>
-			<span id="progressText">0%</span>
-			<button id="pauseBtn" class="pure-button" style="margin-left:1em;">Pause</button>
-		</div>
-		<div id="uploadResult" style="margin-bottom:1em;"></div>
-		<script src="/assets/drive/js/HugeUploader.js"></script>
-		<script>
-		// Use the current URL as the upload endpoint
-		const uploadEndpoint = window.location.pathname;
+<form
+    id="uploadForm"
+    class="pure-form pure-form-stacked"
+    style="margin-bottom: 1em"
+>
+    <fieldset>
+        <legend>Upload new file</legend>
+        <input id="fileInput" name="file" type="file" required />
+        <button
+            id="uploadBtn"
+            type="submit"
+            class="pure-button pure-button-primary"
+        >
+            Upload
+        </button>
+    </fieldset>
+</form>
+<div id="progressContainer" style="display: none; margin-bottom: 1em">
+    <progress
+        id="uploadProgress"
+        value="0"
+        max="100"
+        style="width: 100%"
+    ></progress>
+    <span id="progressText">0%</span>
+    <button id="pauseBtn" class="pure-button" style="margin-left: 1em">
+        Pause
+    </button>
+</div>
+<div id="uploadResult" style="margin-bottom: 1em"></div>
+<script src="/assets/drive/js/HugeUploader.js"></script>
+<script>
+    // Use the current URL as the upload endpoint
+    const uploadEndpoint = window.location.pathname;
 
-		const form = document.getElementById('uploadForm');
-		const fileInput = document.getElementById('fileInput');
-		const progressContainer = document.getElementById('progressContainer');
-		const progressBar = document.getElementById('uploadProgress');
-		const progressText = document.getElementById('progressText');
-		const uploadResult = document.getElementById('uploadResult');
-		const pauseBtn = document.getElementById('pauseBtn');
-		let uploader = null;
+    const form = document.getElementById("uploadForm");
+    const fileInput = document.getElementById("fileInput");
+    const progressContainer = document.getElementById("progressContainer");
+    const progressBar = document.getElementById("uploadProgress");
+    const progressText = document.getElementById("progressText");
+    const uploadResult = document.getElementById("uploadResult");
+    const pauseBtn = document.getElementById("pauseBtn");
+    let uploader = null;
 
-		form.addEventListener('submit', function(e) {
-			e.preventDefault();
-			const file = fileInput.files[0];
-			if (!file) return;
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const file = fileInput.files[0];
+        if (!file) return;
 
-			progressContainer.style.display = '';
-			progressBar.value = 0;
-			progressText.textContent = '0%';
-			uploadResult.textContent = '';
-			pauseBtn.textContent = 'Pause';
+        progressContainer.style.display = "";
+        progressBar.value = 0;
+        progressText.textContent = "0%";
+        uploadResult.textContent = "";
+        pauseBtn.textContent = "Pause";
 
-			// Ensure the file name is safely encoded for use in the URL path
-			const safeFileName = encodeURIComponent(file.name);
-			const endpointWithFile = uploadEndpoint.replace(/\/$/, '') + '/' + safeFileName;
-			uploader = new window.HugeUploader({
-				endpoint: endpointWithFile,
-				file: file,
-				chunkSize: 10, // 10 MB per chunk
-				retries: 5,
-				delayBeforeRetry: 2 // seconds
-			});
+        // Ensure the file name is safely encoded for use in the URL path
+        const safeFileName = encodeURIComponent(file.name);
+        const endpointWithFile =
+            uploadEndpoint.replace(/\/$/, "") + "/" + safeFileName;
+        uploader = new window.HugeUploader({
+            endpoint: endpointWithFile,
+            method: "PUT",
+            file: file,
+            chunkSize: 10, // 10 MB per chunk
+            retries: 5,
+            delayBeforeRetry: 2, // seconds
+        });
 
-			uploader.on('progress', function(e) {
-				progressBar.value = e.detail;
-				progressText.textContent = e.detail + '%';
-			});
-			uploader.on('finish', function(e) {
-				progressBar.value = 100;
-				progressText.textContent = '100%';
-				uploadResult.textContent = 'Upload complete!';
-				setTimeout(() => window.location.reload(), 700);
-			});
-			uploader.on('error', function(e) {
-				uploadResult.textContent = 'Error: ' + (e.detail && e.detail.message ? e.detail.message : e.detail);
-			});
-			uploader.on('fileRetry', function(e) {
-				uploadResult.textContent = 'Retrying chunk ' + e.detail.chunk + '. ' + e.detail.retriesLeft + ' retries left.';
-			});
-		});
+        uploader.on("progress", function (e) {
+            progressBar.value = e.detail;
+            progressText.textContent = e.detail + "%";
+        });
+        uploader.on("finish", function (e) {
+            progressBar.value = 100;
+            progressText.textContent = "100%";
+            uploadResult.textContent = "Upload complete!";
+            setTimeout(() => window.location.reload(), 700);
+        });
+        uploader.on("error", function (e) {
+            uploadResult.textContent =
+                "Error: " +
+                (e.detail && e.detail.message ? e.detail.message : e.detail);
+        });
+        uploader.on("fileRetry", function (e) {
+            uploadResult.textContent =
+                "Retrying chunk " +
+                e.detail.chunk +
+                ". " +
+                e.detail.retriesLeft +
+                " retries left.";
+        });
+    });
 
-		pauseBtn.addEventListener('click', function() {
-			if (!uploader) return;
-			uploader.togglePause();
-			if (uploader.paused) {
-				pauseBtn.textContent = 'Resume';
-				uploadResult.textContent = 'Upload paused.';
-			} else {
-				pauseBtn.textContent = 'Pause';
-				uploadResult.textContent = 'Upload resumed.';
-			}
-		});
-		</script>
+    pauseBtn.addEventListener("click", function () {
+        if (!uploader) return;
+        uploader.togglePause();
+        if (uploader.paused) {
+            pauseBtn.textContent = "Resume";
+            uploadResult.textContent = "Upload paused.";
+        } else {
+            pauseBtn.textContent = "Pause";
+            uploadResult.textContent = "Upload resumed.";
+        }
+    });
+</script>
 {{ end }}
